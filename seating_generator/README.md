@@ -29,7 +29,7 @@
 ```
 pip install pandas numpy
 ```
-Или с помощью [requirements.txt](seating_generator/requirements.txt):  
+Или с помощью [requirements.txt](requirements.txt):  
 ```
 pip install -r путь_к_файлу/requirements.txt
 ```
@@ -118,7 +118,7 @@ XXXX
 
 ## Примеры
 
-В папке [examples](seating_generator/examples) находятся примеры входных файлов:
+В папке [examples](examples) находятся примеры входных файлов:
 
 - `teams.xlsx`: Пример файла со списком команд
 - `places.xlsx`: Пример файла со схемой рассадки
@@ -150,4 +150,4 @@ python seating_generator.py -i examples/teams.xlsx -s examples/places.xlsx -abc
 
 Программа расшаривается AS IS. Для целей, в которых она пригождалась автору, её достаточно, остальное он не гарантирует. Если что-то идёт не так, пишите в [issues](https://github.com/a-berez/games_features/issues) или в личку. Или сразу можете [пуллреквестить](https://github.com/a-berez/games_features/pulls).
 
-Лицензия — [MIT](blob/main/LICENSE).  
+Лицензия — [MIT](https://github.com/a-berez/games_features/blob/main/LICENSE).  
