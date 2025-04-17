@@ -3,6 +3,7 @@
 
 # Игнорировать файлы рассадки seating_generation
 seating_generation/seating*.xlsx
+*dchr.xlsx
 
 # Игнорировать временные файлы Python
 __pycache__/
