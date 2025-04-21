@@ -518,29 +518,28 @@ def save_to_excel(df: pd.DataFrame, filename: str):
             'maxPlayerGames': 15
         }
         
-        # Создаем writer с движком по умолчанию
-        writer = pd.ExcelWriter(safe_filename)
+        # Используем контекстный менеджер для автоматического закрытия и сохранения файла
+        with pd.ExcelWriter(safe_filename, engine='xlsxwriter') as writer:
+            # Записываем данные
+            df.to_excel(writer, index=False, sheet_name='Sheet1')
+            
+            # Пытаемся настроить ширину столбцов, если доступен xlsxwriter
+            try:
+                worksheet = writer.sheets['Sheet1']
+                for i, column in enumerate(df.columns):
+                    if hasattr(worksheet, 'set_column'):  # Проверяем, доступен ли метод set_column
+                        width = column_widths.get(column, 15)  # Используем значение по умолчанию 15, если столбец не найден
+                        worksheet.set_column(i, i, width)
+            except (AttributeError, KeyError):
+                # Если не удалось настроить ширину столбцов, продолжаем без настройки
+                logger.warning("Не удалось настроить ширину столбцов. Используется стандартный формат.")
         
-        # Записываем данные
-        df.to_excel(writer, index=False, sheet_name='Sheet1')
-        
-        # Пытаемся настроить ширину столбцов, если доступен xlsxwriter
-        try:
-            worksheet = writer.sheets['Sheet1']
-            for i, column in enumerate(df.columns):
-                if hasattr(worksheet, 'set_column'):  # Проверяем, доступен ли метод set_column
-                    width = column_widths.get(column, 15)  # Используем значение по умолчанию 15, если столбец не найден
-                    worksheet.set_column(i, i, width)
-        except (AttributeError, KeyError):
-            # Если не удалось настроить ширину столбцов, продолжаем без настройки
-            logger.warning("Не удалось настроить ширину столбцов. Используется стандартный формат.")
-        
-        # Сохраняем файл
-        writer.save()
+        # При выходе из блока with файл автоматически сохраняется и закрывается
         logger.info(f"Данные сохранены в файл: {safe_filename}")
     except Exception as e:
         logger.error(f"Ошибка при сохранении данных в файл {safe_filename}: {e}")
         raise
+
 
 
 def main():
