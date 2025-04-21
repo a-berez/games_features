@@ -1,9 +1,9 @@
-# Игнорировать log-файлы в директории seating_generation
-*.log
 
-# Игнорировать файлы рассадки seating_generation
+*.log
 seating_generation/seating*.xlsx
 *dchr.xlsx
+_drafts*
+games_counter/*.xlsx
 
 # Игнорировать временные файлы Python
 __pycache__/
