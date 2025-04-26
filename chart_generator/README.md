@@ -12,7 +12,7 @@
 - Снятые вопросы
 
 ## Примеры
-- [СтудЧР 2025](https://nbviewer.org/github/a-berez/games_features/blob/main/chart_generator/examples/screenshot.png)
+- [СтудЧР 2025](examples/screenshot.png)
 
 ## Установка
 
