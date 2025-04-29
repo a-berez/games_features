@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Весна в ЛЭТИ</title>
+    
+    <!-- Подключаем шрифт Noto Sans с Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- Подключаем D3.js -->
+    <script type="text/javascript" src="https://d3js.org/d3.v4.min.js"></script>
+    
+    <!-- Подключаем Replay Table -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/replay-table/dist/replay-table.min.js"></script>
+    
+    <!-- Подключаем стили -->
+    <link rel="stylesheet" type="text/css" href="../work/chart_generator_style.css">
+</head>
+<body>
+    <h1>Весна в ЛЭТИ</h1>
+    
+    <div class="tournament-info">
+        
+        <p>Следите за изменением положения команд после каждого вопроса</p>
+        <p>Интерактивный график можно посмотреть <a href="11740_chart.html">тут</a></p>
+    </div>
+    
+    <div class="content">
+        <div class="replayTable" id="chgk-table" 
+             data-source="11740.csv" 
+             data-preset="chgk">
+        </div>
+    </div>
+    
+    <footer>
+        <p>Сгенерировано с помощью <a href="https://github.com/a-berez/games_features/tree/main/chart_generator" target="_blank">chart_generator</a></p>
+        <p>ID турнира: <a href="https://rating.chgk.info/tournament/11740" target="_blank">11740</a></p>
+        <p>Создано с помощью библиотеки <a href="https://github.com/antoniokov/replay-table">Replay Table</a> by <a href="https://github.com/antoniokov/">antoniokov</a></p>
+        
+        
+    </footer>
+
+    <!-- Подключаем скрипты -->
+    <script type="text/javascript" src="../work/chart_generator_scripts.js"></script>
+</body>
+</html>
