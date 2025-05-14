@@ -12,7 +12,7 @@
 - Снятые вопросы
 
 ## Примеры
-- [на сайте](https://aberez.ru/charts/examples.html)
+- [на сайте](https://a-berez.github.io/charts/examples/)
 - [в папке](examples)
 
 ## Установка
