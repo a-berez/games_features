@@ -4,16 +4,16 @@ html {
 }
 
 body {
-    font-family: 'Noto Sans', sans-serif;
-    max-width: 100%; /* Было 1200px */
-    margin: 0 auto;
-    padding: 20px;
+    font-family: 'Noto Sans', 'Helvetica', sans-serif;
+    margin: 0;
+    padding: 0;
     display: flex;
     flex-direction: column;
     min-height: 100vh;
     line-height: 1.6;
     background-color: #f5f5f5;
     font-size: 16px;
+    box-sizing: border-box;
 }
 
 
@@ -26,7 +26,7 @@ h1, h2, h3 {
 h1 {
     font-size: 2.2rem;
     margin-bottom: 1rem;
-    color: green;
+    color: #71c0a1;
 }
 
 h2 {
@@ -73,17 +73,18 @@ h3 {
 }
 
 /* Стили для футера */
-footer {
+footer, .footer {
     margin-top: 40px;
     text-align: center;
     font-size: 14px;
     color: #666;
-    padding: 20px 0;
+    padding: 20px 15px;
     width: 100%;
+    box-sizing: border-box;
+    max-width: 100%;
 }
 
 footer a {
-    color: #3366cc;
     text-decoration: none;
 }
 
@@ -578,9 +579,16 @@ footer a:hover {
 }
 
 /* Добавленные стили из генерируемого HTML */
+
+.container, .flag-links, .flag-nav {
+    width: 100%;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
+}
+
 .container {
-    max-width: 100%;
-    margin: 0 auto;
     background-color: white;
     padding: 15px;
     border-radius: 8px;
@@ -619,6 +627,7 @@ footer a:hover {
     background-color: #f9f9f9;
     border-radius: 8px;
 }
+
 .flag-section {
     margin-top: 50px;
     padding-top: 20px;

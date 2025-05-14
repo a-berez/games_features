@@ -875,6 +875,7 @@ def create_table_html(data: Dict, output_path: str, csv_path: str, chart_path: s
     <link rel="stylesheet" type="text/css" href="{work_path}/chart_generator_style.css">
 </head>
 <body>
+    <div class="container">
     <h1>{tournament_name}</h1>
     
     <div class="tournament-info">
@@ -897,7 +898,7 @@ def create_table_html(data: Dict, output_path: str, csv_path: str, chart_path: s
         
         
     </footer>
-
+    </div>
     <!-- Подключаем скрипты -->
     <script type="text/javascript" src="{work_path}/chart_generator_scripts.js"></script>
 </body>
@@ -1221,7 +1222,7 @@ def create_chart_figure(chart_data: Dict, title: str) -> str:
     
     # Настраиваем макет графика с адаптивными размерами
     fig.update_layout(
-        title=f"{title}: график взятий вопросов",
+        title=f"{title} — график взятий вопросов",
         xaxis_title="Номер вопроса",
         yaxis_title="Количество взятых вопросов",
         hovermode="closest",
