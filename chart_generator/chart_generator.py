@@ -855,54 +855,50 @@ def create_table_html(data: Dict, output_path: str, csv_path: str, chart_path: s
     # Подготавливаем HTML-код для таблицы
     html = f'''<!DOCTYPE html>
 <html lang="ru">
-<head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{tournament_name}</title>
-    
-    <!-- Подключаем шрифт Noto Sans с Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>{tournament_name}</title>
 
-    <!-- Подключаем D3.js -->
-    <script type="text/javascript" src="https://d3js.org/d3.v4.min.js"></script>
-    
-    <!-- Подключаем Replay Table -->
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/replay-table/dist/replay-table.min.js"></script>
-    
-    <!-- Подключаем стили -->
-    <link rel="stylesheet" type="text/css" href="{work_path}/chart_generator_style.css">
-</head>
-<body>
-    <div class="container">
-    <h1>{tournament_name}</h1>
-    
-    <div class="tournament-info">
-        {back_link_html}
-        <p>Следите за изменением положения команд после каждого вопроса</p>
-        <p>Интерактивный график можно посмотреть <a href="{relative_chart_path}">тут</a></p>
-    </div>
-    
-    <div class="content">
-        <div class="replayTable" id="chgk-table" 
-             data-source="{relative_csv_path}" 
-             data-preset="chgk">
-        </div>
-    </div>
-    
-    <footer>
-        <p>Сгенерировано с помощью <a href="https://github.com/a-berez/games_features/tree/main/chart_generator" target="_blank">chart_generator</a></p>
-        {f'<p>ID турнира: <a href="https://rating.chgk.info/tournament/{tournament_id}" target="_blank">{tournament_id}</a></p>' if tournament_id else ''}
-        <p>Создано с помощью библиотеки <a href="https://github.com/antoniokov/replay-table">Replay Table</a> by <a href="https://github.com/antoniokov/">antoniokov</a></p>
-        
-        
-    </footer>
-    </div>
-    <!-- Подключаем скрипты -->
-    <script type="text/javascript" src="{work_path}/chart_generator_scripts.js"></script>
-</body>
-</html>'''
+		<!-- Подключаем шрифт Noto Sans с Google Fonts -->
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet" />
+
+		<!-- Подключаем D3.js -->
+		<script type="text/javascript" src="https://d3js.org/d3.v4.min.js"></script>
+
+		<!-- Подключаем Replay Table -->
+		<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/replay-table/dist/replay-table.min.js"></script>
+
+		<!-- Подключаем стили -->
+		<link rel="stylesheet" type="text/css" href="{work_path}/chart_generator_style.css" />
+	</head>
+	<body>
+		<div class="container">
+			<h1>{tournament_name}</h1>
+
+			<div class="tournament-info">
+				{back_link_html}
+				<p>Следите за изменением положения команд после каждого вопроса</p>
+				<p>Интерактивный график можно посмотреть <a href="{relative_chart_path}">тут</a></p>
+			</div>
+
+			<div class="content">
+				<div class="replayTable" id="chgk-table" data-source="{relative_csv_path}" data-preset="chgk"></div>
+			</div>
+
+			<footer>
+				<p>Сгенерировано с помощью <a href="https://github.com/a-berez/games_features/tree/main/chart_generator" target="_blank">chart_generator</a></p>
+				{f'<p>ID турнира: <a href="https://rating.chgk.info/tournament/{tournament_id}" target="_blank">{tournament_id}</a></p>' if tournament_id else ''}
+				<p>Создано с помощью библиотеки <a href="https://github.com/antoniokov/replay-table">Replay Table</a> by <a href="https://github.com/antoniokov/">antoniokov</a></p>
+			</footer>
+		</div>
+		<!-- Подключаем скрипты -->
+		<script type="text/javascript" src="{work_path}/chart_generator_scripts.js"></script>
+	</body>
+</html>
+'''
     # Создаем директорию для сохранения файла, если она не существует
     output_dir = os.path.dirname(output_path)
     os.makedirs(output_dir, exist_ok=True)
@@ -1025,14 +1021,17 @@ def create_chart_html(data: Dict, output_path: str, table_path: Optional[str] = 
             
             # Добавляем ссылку в основной HTML
             relative_chart_path = os.path.relpath(flag_chart_path, output_dir)
-            flag_links_html += f'<li><a href="{relative_chart_path}" target="_blank">{flag_name}</a></li>'
+            flag_links_html += f'<li>{flag_name}: <a href="{relative_chart_path}" target="_blank">график</a>'
             
             # Если есть таблица, добавляем ссылку на нее
             if flag_table_path:
                 relative_table_path = os.path.relpath(flag_table_path, output_dir)
-                flag_links_html += f' (<a href="{relative_table_path}" target="_blank">таблица</a>)'
+                flag_links_html += f', <a href="{relative_table_path}" target="_blank">таблица</a>'
+            
+            flag_links_html += '</li>'
         
         flag_links_html += '</ul></div>'
+
         
         # Вставляем ссылки перед закрывающим тегом body
         main_html = main_html.replace('</body>', f'{flag_links_html}</body>')
@@ -1141,43 +1140,43 @@ def create_single_chart_html(chart_data: Dict, title: str, tournament_id: Option
     
     # Формируем полный HTML-код страницы
     html = f'''
-    <!DOCTYPE html>
-    <html lang="ru">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>{title}</title>
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-        <link rel="stylesheet" type="text/css" href="{work_path}/chart_generator_style.css">
-    </head>
-    <body>
-        <div class="container">
-            <h1>{title}</h1>
-            
-            <div class="tournament-info">
-                {back_link_html}
-                {table_link_html}
-            </div>
-            
-            <div class="main-chart">
-                <h2>График взятий вопросов</h2>
-                <div class="chart-container">
-                    {chart_figure_html}
-                </div>
-            </div><!-- main-chart -->
-            
-            <div class="statistics">
-                <h2>Статистика турнира</h2>
-                {statistics_html}
-            </div>
-            
-            <div class="footer">
-                <p>Сгенерировано с помощью <a href="https://github.com/a-berez/games_features/tree/main/chart_generator" target="_blank">chart_generator</a></p>
-                {f'<p>ID турнира: <a href="https://rating.chgk.info/tournament/{tournament_id}" target="_blank">{tournament_id}</a></p>' if tournament_id else ''}
-            </div>
-        </div>
-    </body>
-    </html>
+<!DOCTYPE html>
+<html lang="ru">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>{title}</title>
+		<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet" />
+		<link rel="stylesheet" type="text/css" href="{work_path}/chart_generator_style.css" />
+	</head>
+	<body>
+		<div class="container">
+			<h1>{title}</h1>
+
+			<div class="tournament-info">
+				{back_link_html} {table_link_html}
+			</div>
+
+			<div class="main-chart">
+				<h2>График взятий вопросов</h2>
+				<div class="chart-container">
+					{chart_figure_html}
+				</div>
+			</div>
+			<!-- main-chart -->
+
+			<div class="statistics">
+				<h2>Статистика турнира</h2>
+				{statistics_html}
+			</div>
+
+			<div class="footer">
+				<p>Сгенерировано с помощью <a href="https://github.com/a-berez/games_features/tree/main/chart_generator" target="_blank">chart_generator</a></p>
+				{f'<p>ID турнира: <a href="https://rating.chgk.info/tournament/{tournament_id}" target="_blank">{tournament_id}</a></p>' if tournament_id else ''}
+			</div>
+		</div>
+	</body>
+</html>
     '''
     
     return html
