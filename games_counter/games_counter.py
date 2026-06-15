@@ -31,8 +31,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Базовый URL API
-BASE_URL = "https://api.rating.chgk.net"
+# Базовые URL API
+BASE_URLS = [
+    "https://api.rating.chgk.net",
+    "https://rating-api.pecheny.me"
+]
 
 # Кэши для хранения данных и уменьшения количества запросов к API
 tournament_info_cache = {}  # Кэш информации о турнирах
@@ -85,6 +88,34 @@ def get_user_input() -> Tuple[int, int]:
     
     return tournament_id, season_id
 
+def make_api_request(url: str) -> requests.Response:
+    """
+    Выполнение запроса к API с автоматическим переключением между базовыми URL.
+    
+    Args:
+        url (str): Относительный путь API
+        
+    Returns:
+        requests.Response: Ответ от API
+        
+    Raises:
+        requests.exceptions.RequestException: Если все запросы завершились с ошибкой
+    """
+    last_error = None
+    
+    for base_url in BASE_URLS:
+        try:
+            full_url = f"{base_url}{url}"
+            response = requests.get(full_url)
+            response.raise_for_status()
+            return response
+        except requests.exceptions.RequestException as e:
+            last_error = e
+            continue
+    
+    if last_error:
+        raise last_error
+
 def get_seasons() -> List[Dict[str, Any]]:
     """
     Получение списка всех сезонов из API с использованием кэша.
@@ -97,12 +128,8 @@ def get_seasons() -> List[Dict[str, Any]]:
     if seasons_cache is not None:
         return seasons_cache
     
-    url = f"{BASE_URL}/seasons"
-    logger.info(f"Запрос списка сезонов: {url}")
-    
     try:
-        response = requests.get(url)
-        response.raise_for_status()
+        response = make_api_request("/seasons")
         seasons = response.json()
         logger.info(f"Получено {len(seasons)} сезонов")
         seasons_cache = seasons
@@ -110,7 +137,6 @@ def get_seasons() -> List[Dict[str, Any]]:
     except requests.exceptions.RequestException as e:
         logger.error(f"Ошибка при получении списка сезонов: {e}")
         raise
-
 
 def get_tournament_results(tournament_id: int) -> List[Dict[str, Any]]:
     """
@@ -122,12 +148,10 @@ def get_tournament_results(tournament_id: int) -> List[Dict[str, Any]]:
     Returns:
         List[Dict[str, Any]]: Результаты турнира
     """
-    url = f"{BASE_URL}/tournaments/{tournament_id}/results?includeTeamMembers=1&includeMasksAndControversials=0&includeTeamFlags=0&includeRatingB=0"
-    logger.info(f"Запрос результатов турнира {tournament_id}: {url}")
+    url = f"/tournaments/{tournament_id}/results?includeTeamMembers=1&includeMasksAndControversials=0&includeTeamFlags=0&includeRatingB=0"
     
     try:
-        response = requests.get(url)
-        response.raise_for_status()
+        response = make_api_request(url)
         results = response.json()
         logger.info(f"Получены результаты турнира {tournament_id}: {len(results)} команд")
         return results
@@ -148,11 +172,8 @@ def get_tournament_info(tournament_id: int) -> Dict[str, Any]:
     if tournament_id in tournament_info_cache:
         return tournament_info_cache[tournament_id]
     
-    url = f"{BASE_URL}/tournaments/{tournament_id}"
-    
     try:
-        response = requests.get(url)
-        response.raise_for_status()
+        response = make_api_request(f"/tournaments/{tournament_id}")
         info = response.json()
         tournament_info_cache[tournament_id] = info
         return info
@@ -173,11 +194,8 @@ def get_player_tournaments(player_id: int) -> List[Dict[str, Any]]:
     if player_id in player_tournaments_cache:
         return player_tournaments_cache[player_id]
     
-    url = f"{BASE_URL}/players/{player_id}/tournaments"
-    
     try:
-        response = requests.get(url)
-        response.raise_for_status()
+        response = make_api_request(f"/players/{player_id}/tournaments")
         tournaments = response.json()
         player_tournaments_cache[player_id] = tournaments
         return tournaments
@@ -198,11 +216,8 @@ def get_team_tournaments(team_id: int) -> List[Dict[str, Any]]:
     if team_id in team_tournaments_cache:
         return team_tournaments_cache[team_id]
     
-    url = f"{BASE_URL}/teams/{team_id}/tournaments"
-    
     try:
-        response = requests.get(url)
-        response.raise_for_status()
+        response = make_api_request(f"/teams/{team_id}/tournaments")
         tournaments = response.json()
         team_tournaments_cache[team_id] = tournaments
         return tournaments
@@ -246,7 +261,42 @@ def is_tournament_in_season(tournament_id: int, season_id: int, main_tournament_
     season_tournament_cache[cache_key] = False
     return False
 
-def analyze_player_tournaments_batch(player_data: List[Tuple[int, int]], season_id: int, main_tournament_end_date: datetime.datetime) -> Dict[int, Tuple[int, int]]:
+def analyze_team_tournaments_batch(team_ids: List[int], season_id: int, main_tournament_end_date: datetime.datetime, current_tournament_id: int) -> Dict[int, int]:
+    """
+    Анализ турниров группы команд за указанный сезон (пакетная обработка).
+    
+    Args:
+        team_ids (List[int]): Список ID команд
+        season_id (int): ID сезона
+        main_tournament_end_date (datetime.datetime): Дата завершения основного турнира
+        current_tournament_id (int): ID текущего анализируемого турнира
+    
+    Returns:
+        Dict[int, int]: Словарь {ID команды: количество турниров}
+    """
+    results = {}
+    
+    for i, team_id in enumerate(team_ids, 1):
+        team_tournaments = get_team_tournaments(team_id)
+        
+        games_count = 0
+        
+        for tournament in team_tournaments:
+            tournament_id = tournament["idtournament"]
+            
+            # Пропускаем текущий турнир
+            if tournament_id == current_tournament_id:
+                continue
+                
+            if is_tournament_in_season(tournament_id, season_id, main_tournament_end_date):
+                games_count += 1
+        
+        results[team_id] = games_count
+        print(f"\rКоманда {i}/{len(team_ids)} (турниров: {games_count})", end="")
+    
+    return results
+
+def analyze_player_tournaments_batch(player_data: List[Tuple[int, int]], season_id: int, main_tournament_end_date: datetime.datetime, current_tournament_id: int) -> Dict[int, Tuple[int, int]]:
     """
     Анализ турниров группы игроков за указанный сезон (пакетная обработка).
     
@@ -254,13 +304,14 @@ def analyze_player_tournaments_batch(player_data: List[Tuple[int, int]], season_
         player_data (List[Tuple[int, int]]): Список кортежей (ID игрока, ID команды)
         season_id (int): ID сезона
         main_tournament_end_date (datetime.datetime): Дата завершения основного турнира
+        current_tournament_id (int): ID текущего анализируемого турнира
     
     Returns:
         Dict[int, Tuple[int, int]]: Словарь {ID игрока: (base_games, other_games)}
     """
     results = {}
     
-    for player_id, team_id in player_data:
+    for i, (player_id, team_id) in enumerate(player_data, 1):
         player_tournaments = get_player_tournaments(player_id)
         
         base_games = 0  # Турниры в составе указанной команды
@@ -268,6 +319,11 @@ def analyze_player_tournaments_batch(player_data: List[Tuple[int, int]], season_
         
         for tournament in player_tournaments:
             tournament_id = tournament["idtournament"]
+            
+            # Пропускаем текущий турнир
+            if tournament_id == current_tournament_id:
+                continue
+                
             current_team_id = tournament["idteam"]
             
             if is_tournament_in_season(tournament_id, season_id, main_tournament_end_date):
@@ -277,39 +333,11 @@ def analyze_player_tournaments_batch(player_data: List[Tuple[int, int]], season_
                     other_games += 1
         
         results[player_id] = (base_games, other_games)
+        print(f"\rИгрок {i}/{len(player_data)} (игр: {base_games + other_games})", end="")
     
     return results
 
-def analyze_team_tournaments_batch(team_ids: List[int], season_id: int, main_tournament_end_date: datetime.datetime) -> Dict[int, int]:
-    """
-    Анализ турниров группы команд за указанный сезон (пакетная обработка).
-    
-    Args:
-        team_ids (List[int]): Список ID команд
-        season_id (int): ID сезона
-        main_tournament_end_date (datetime.datetime): Дата завершения основного турнира
-    
-    Returns:
-        Dict[int, int]: Словарь {ID команды: количество турниров}
-    """
-    results = {}
-    
-    for team_id in team_ids:
-        team_tournaments = get_team_tournaments(team_id)
-        
-        games_count = 0
-        
-        for tournament in team_tournaments:
-            tournament_id = tournament["idtournament"]
-            
-            if is_tournament_in_season(tournament_id, season_id, main_tournament_end_date):
-                games_count += 1
-        
-        results[team_id] = games_count
-    
-    return results
-
-def process_data_in_parallel(tournament_results: List[Dict[str, Any]], season_id: int, main_tournament_end_date: datetime.datetime) -> Tuple[Dict[int, int], Dict[int, Tuple[int, int]]]:
+def process_data_in_parallel(tournament_results: List[Dict[str, Any]], season_id: int, main_tournament_end_date: datetime.datetime, current_tournament_id: int) -> Tuple[Dict[int, int], Dict[int, Tuple[int, int]]]:
     """
     Параллельная обработка данных о турнирах команд и игроков.
     
@@ -317,6 +345,7 @@ def process_data_in_parallel(tournament_results: List[Dict[str, Any]], season_id
         tournament_results (List[Dict[str, Any]]): Результаты турнира
         season_id (int): ID сезона
         main_tournament_end_date (datetime.datetime): Дата завершения основного турнира
+        current_tournament_id (int): ID текущего анализируемого турнира
     
     Returns:
         Tuple[Dict[int, int], Dict[int, Tuple[int, int]]]: Словари с результатами для команд и игроков
@@ -344,12 +373,13 @@ def process_data_in_parallel(tournament_results: List[Dict[str, Any]], season_id
     player_chunks = [player_data[i:i + 10] for i in range(0, len(player_data), 10)]
     
     # Обработка команд
-    print(f"\nОбработка данных для {len(team_ids)} команд:")
+    print("\nОбработка команд:")
     team_counter = 0
+    total_team_games = 0
     
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         future_to_chunk = {
-            executor.submit(analyze_team_tournaments_batch, chunk, season_id, main_tournament_end_date): chunk
+            executor.submit(analyze_team_tournaments_batch, chunk, season_id, main_tournament_end_date, current_tournament_id): chunk
             for chunk in team_chunks
         }
         
@@ -357,18 +387,19 @@ def process_data_in_parallel(tournament_results: List[Dict[str, Any]], season_id
             chunk_results = future.result()
             team_results.update(chunk_results)
             team_counter += len(chunk_results)
-            # Обновляем прогресс в одной строке
-            print(f"\rОбработано {team_counter}/{len(team_ids)} команд ({team_counter/len(team_ids)*100:.1f}%)", end="")
+            total_team_games += sum(chunk_results.values())
+            print(f"\rКоманда {team_counter}/{len(team_ids)} (всего турниров: {total_team_games})", end="")
     
     print()  # Переход на новую строку после завершения обработки команд
     
     # Обработка игроков
-    print(f"\nОбработка данных для {len(player_data)} игроков:")
+    print("\nОбработка игроков:")
     player_counter = 0
+    total_player_games = 0
     
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         future_to_chunk = {
-            executor.submit(analyze_player_tournaments_batch, chunk, season_id, main_tournament_end_date): chunk
+            executor.submit(analyze_player_tournaments_batch, chunk, season_id, main_tournament_end_date, current_tournament_id): chunk
             for chunk in player_chunks
         }
         
@@ -376,13 +407,12 @@ def process_data_in_parallel(tournament_results: List[Dict[str, Any]], season_id
             chunk_results = future.result()
             player_results.update(chunk_results)
             player_counter += len(chunk_results)
-            # Обновляем прогресс в одной строке
-            print(f"\rОбработано {player_counter}/{len(player_data)} игроков ({player_counter/len(player_data)*100:.1f}%)", end="")
+            total_player_games += sum(base + other for base, other in chunk_results.values())
+            print(f"\rИгрок {player_counter}/{len(player_data)} (всего игр: {total_player_games})", end="")
     
     print()  # Переход на новую строку после завершения обработки игроков
     
     return team_results, player_results
-
 
 def create_teams_table(tournament_results: List[Dict[str, Any]], team_results: Dict[int, int], player_results: Dict[int, Tuple[int, int]]) -> pd.DataFrame:
     """
@@ -402,8 +432,10 @@ def create_teams_table(tournament_results: List[Dict[str, Any]], team_results: D
         team_id = result["team"]["id"]
         team_name = result["team"]["name"]
         team_town = result["team"]["town"]["name"] if "town" in result["team"] else ""
-        position = result["position"]
-        taken = result.get("questionsTotal", 0)
+        taken = result.get("questionsTotal", 0) or 0  # Если None или 0, используем 0
+        
+        # Определяем позицию команды: если нет данных о взятиях, турнир не завершен
+        position = result.get("position", 9999) if taken > 0 else 9999
         
         # Получаем количество турниров команды
         team_games = team_results.get(team_id, 0)
@@ -452,8 +484,10 @@ def create_players_table(tournament_results: List[Dict[str, Any]], player_result
         team_id = result["team"]["id"]
         team_name = result["team"]["name"]
         team_town = result["team"]["town"]["name"] if "town" in result["team"] else ""
-        position = result["position"]
-        taken = result.get("questionsTotal", 0)
+        taken = result.get("questionsTotal", 0) or 0  # Если None или 0, используем 0
+        
+        # Определяем позицию команды: если нет данных о взятиях, турнир не завершен
+        position = result.get("position", 9999) if taken > 0 else 9999
         
         for member in result.get("teamMembers", []):
             player_id = member["player"]["id"]
@@ -540,8 +574,6 @@ def save_to_excel(df: pd.DataFrame, filename: str):
         logger.error(f"Ошибка при сохранении данных в файл {safe_filename}: {e}")
         raise
 
-
-
 def main():
     """
     Основная функция скрипта.
@@ -558,13 +590,15 @@ def main():
         tournament_info = get_tournament_info(tournament_id)
         tournament_name = tournament_info.get("name", "Unnamed_Tournament")
         
-        # Получение даты завершения турнира
-        if "dateEnd" not in tournament_info:
-            logger.error(f"Турнир {tournament_id} не содержит даты завершения")
-            raise ValueError(f"Турнир {tournament_id} не содержит даты завершения")
-        
-        main_tournament_end_date = datetime.datetime.fromisoformat(tournament_info["dateEnd"].replace("Z", "+00:00"))
-        logger.info(f"Дата завершения турнира: {main_tournament_end_date}")
+        # Получение даты завершения турнира (если есть)
+        main_tournament_end_date = None
+        if "dateEnd" in tournament_info:
+            main_tournament_end_date = datetime.datetime.fromisoformat(tournament_info["dateEnd"].replace("Z", "+00:00"))
+            logger.info(f"Дата завершения турнира: {main_tournament_end_date}")
+        else:
+            # Если дата завершения не указана, используем текущую дату
+            main_tournament_end_date = datetime.datetime.now()
+            logger.info("Дата завершения турнира не указана, используется текущая дата")
         
         # Получение результатов турнира
         tournament_results = get_tournament_results(tournament_id)
@@ -577,7 +611,7 @@ def main():
         
         # Параллельная обработка данных
         team_results, player_results = process_data_in_parallel(
-            tournament_results, season_id, main_tournament_end_date
+            tournament_results, season_id, main_tournament_end_date, tournament_id
         )
         
         # Создание таблиц

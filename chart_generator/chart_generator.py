@@ -51,7 +51,14 @@ def parse_arguments() -> argparse.Namespace:
     Парсинг аргументов командной строки.
     
     Returns:
-        Объект с аргументами командной строки
+        argparse.Namespace: Объект с аргументами командной строки, содержащий следующие поля:
+            - source (str): ID турнира или путь к табличному файлу
+            - flags (str): Список ID флагов для фильтрации команд
+            - more_files (str): Флаг создания отдельных файлов для флагов
+            - table (bool): Флаг создания HTML-файлов с таблицами
+            - name (str): Название турнира
+            - output (str): Имя выходного файла
+            - dev (bool): Режим разработчика
     """
     parser = argparse.ArgumentParser(
         description="Генерация HTML-файлов с графиками и таблицами взятий вопросов"
@@ -113,22 +120,44 @@ def get_tournament_info(tournament_id: str) -> Dict:
     Получает информацию о турнире по его ID через API.
     
     Args:
-        tournament_id: ID турнира
+        tournament_id (str): ID турнира
         
     Returns:
-        Словарь с информацией о турнире
+        Dict: Словарь с информацией о турнире
+        
+    Raises:
+        requests.exceptions.RequestException: При ошибке HTTP-запроса
+        ValueError: При некорректном ID турнира
     """
+    if not tournament_id or not tournament_id.isdigit():
+        raise ValueError(f"Некорректный ID турнира: {tournament_id}")
+        
     url = f"https://api.rating.chgk.net/tournaments/{tournament_id}"
     logger.info(f"Получение информации о турнире {tournament_id}...")
     
     try:
-        response = requests.get(url)
+        response = requests.get(url, timeout=10)  # Добавляем таймаут
         response.raise_for_status()
         tournament_info = response.json()
+        
+        if not tournament_info:
+            logger.warning(f"Получена пустая информация о турнире {tournament_id}")
+            return {}
+            
         logger.debug(f"Получена информация о турнире: {tournament_info}")
         return tournament_info
+        
+    except requests.exceptions.Timeout:
+        logger.error(f"Превышено время ожидания при получении информации о турнире {tournament_id}")
+        return {}
+    except requests.exceptions.HTTPError as e:
+        logger.error(f"HTTP ошибка при получении информации о турнире {tournament_id}: {e}")
+        return {}
     except requests.exceptions.RequestException as e:
-        logger.error(f"Ошибка при получении информации о турнире: {e}")
+        logger.error(f"Ошибка при получении информации о турнире {tournament_id}: {e}")
+        return {}
+    except ValueError as e:
+        logger.error(f"Ошибка при разборе JSON ответа для турнира {tournament_id}: {e}")
         return {}
 def get_tournament_results(tournament_id: str) -> List[Dict]:
     """
@@ -783,19 +812,31 @@ def create_csv_file(chart_data: Dict, output_path: str) -> None:
     Создает CSV-файл для таблицы Replay Table.
     
     Args:
-        chart_data: Данные для построения графика и таблицы
-        output_path: Путь для сохранения CSV-файла
+        chart_data (Dict): Данные для построения графика и таблицы
+        output_path (str): Путь для сохранения CSV-файла
+        
+    Raises:
+        ValueError: При некорректных входных данных
+        OSError: При ошибках работы с файловой системой
     """
     teams = chart_data.get('teams', [])
     questions_count = chart_data.get('questions_count', 0)
     
     if not teams or questions_count == 0:
-        logger.error("Нет данных для создания CSV-файла")
-        return
+        raise ValueError("Нет данных для создания CSV-файла")
+    
+    # Проверяем безопасность пути
+    output_path = os.path.abspath(output_path)
+    if not output_path.endswith('.csv'):
+        raise ValueError("Выходной файл должен иметь расширение .csv")
+    
+    # Создаем директорию, если она не существует
+    output_dir = os.path.dirname(output_path)
+    os.makedirs(output_dir, exist_ok=True)
     
     logger.info(f"Создание CSV-файла для таблицы: {output_path}")
+    
     try:
-        # Открываем файл для записи
         with open(output_path, 'w', newline='', encoding='utf-8') as csvfile:
             # Создаем writer с разделителем-запятой
             csv_writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
@@ -815,8 +856,10 @@ def create_csv_file(chart_data: Dict, output_path: str) -> None:
                 csv_writer.writerow(row)
         
         logger.info(f"CSV-файл успешно создан: {output_path}")
-    except Exception as e:
-        logger.error(f"Ошибка при создании CSV-файла: {e}")
+        
+    except OSError as e:
+        logger.error(f"Ошибка при создании CSV-файла {output_path}: {e}")
+        raise
 
 def create_table_html(data: Dict, output_path: str, csv_path: str, chart_path: str, 
                      tournament_id: Optional[str] = None, is_extra_file: bool = False,
