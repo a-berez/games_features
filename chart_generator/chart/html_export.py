@@ -8,6 +8,7 @@ from typing import Any, Sequence
 
 from .constants import DEFAULT_ACCENT_COLOR, TEMPLATES_DIR
 from .static_bundle import SCRIPTS_JS, STYLE_CSS, write_bundled_static
+from .plural import teams_nominative, teams_took_question
 from .stats import QuestionStats
 
 logger = logging.getLogger(__name__)
@@ -97,11 +98,11 @@ def statistics_html(stats: QuestionStats) -> str:
     if stats.hardest:
         out.append("<ul>")
         for q in stats.hardest:
-            out.append(f'<li class="question-item">Вопрос {q.question_num} — взяли {q.takes_count} команд')
+            out.append(f'<li class="question-item">Вопрос {q.question_num} — {teams_took_question(q.takes_count)}')
             if q.teams_took and len(q.teams_took) <= 10:
                 out.append(f'<div class="teams-took">Взяли: {html.escape(", ".join(q.teams_took))}</div>')
             elif q.teams_took and len(q.teams_took) > 10:
-                out.append(f'<div class="teams-took">Взяли {len(q.teams_took)} команд</div>')
+                out.append(f'<div class="teams-took">Взяли {teams_nominative(len(q.teams_took))}</div>')
             out.append("</li>")
         out.append("</ul>")
     else:
@@ -113,7 +114,7 @@ def statistics_html(stats: QuestionStats) -> str:
     if stats.easiest:
         out.append("<ul>")
         for qnum, takes in stats.easiest:
-            out.append(f"<li>Вопрос {qnum} — взяли {takes} команд</li>")
+            out.append(f"<li>Вопрос {qnum} — {teams_took_question(takes)}</li>")
         out.append("</ul>")
     else:
         out.append("<p>Нет данных</p>")
@@ -149,7 +150,7 @@ def build_chart_page(
     return render_template(
         "chart.html",
         page_title=html.escape(page_title),
-        teams_count=html.escape(f"{teams_count} команд"),
+        teams_count=html.escape(teams_nominative(teams_count)),
         chart_html=chart_html,
         statistics_html=stats_html,
         tournament_id_line=tournament_id_line(tournament_id),
